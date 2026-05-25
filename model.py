@@ -117,3 +117,20 @@ for epoch in range(100):
         loss = lossfn(out, y_batch)
         loss.backward()
         optimizer.step()
+
+str = input("Welcome to the Shakespearean Generator! Enter your text here: ")
+context = torch.tensor([[cha[ch] for ch in str]])
+
+model.eval()
+for _ in range(500):
+    context = context[:, -seq_len:]
+    out = model(context)
+    out = out[:, -1, :]
+
+    probs = F.softmax(out/0.8, dim=-1)
+    next_token = torch.multinomial(probs, 1)
+    
+    context = torch.cat([context, next_token], dim=1)
+
+output = "".join([idx[i.item()] for i in context[0]])
+print(output)
