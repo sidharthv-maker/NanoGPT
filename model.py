@@ -36,3 +36,25 @@ class MHSelfAttention(nn.Module):
         out = out.view(B, T, self.emb_dim)
         out = self.W_O(out)
         return out
+
+class Transformer(nn.Module):
+    def __init__(self, emb_dim, head_num, seq_len):
+        self.attn = MHSelfAttention(emb_dim, head_num)
+        self.norm1 = nn.LayerNorm(emb_dim)
+        self.layer = nn.Sequential(
+            nn.Linear(emb_dim, 4*emb_dim),
+            nn.ReLU(),
+            nn.Linear(4*emb_dim, emb_dim)
+        )
+        self.norm2 = nn.LayerNorm(emb_dim)
+
+    def forward(self, x):
+       out = self.attn(x)
+       x = x + out
+       x = self.norm1(x)
+       
+       out = self.ff(x)
+       x = x+out
+       x = self.norm2(x)
+       return x
+
