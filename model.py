@@ -1,4 +1,3 @@
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -58,3 +57,29 @@ class Transformer(nn.Module):
        x = self.norm2(x)
        return x
 
+with open("shakespeare.txt", "r") as f:
+    text = f.read()
+
+chars = sorted(set(text))
+vocab_size = len(chars)
+
+cha = {}
+idx = {}
+for i, ch in enumerate(chars):
+    cha[ch] = i
+for ch, i in cha.items():
+    idx[i] = ch
+
+data = torch.tensor([cha[ch] for ch in text])
+
+X, y = []
+seq_len = 256
+for i in range(0, len(data) - seq_len):
+    X.append(data[i:i+seq_len])
+    y.append(data[i+1:i+seq_len+1])
+
+X = torch.stack(X)
+y = torch.stack(y)
+
+dset = TensorDataset(X,y)
+loader = DataLoader(dset, 32, shuffle=True)
