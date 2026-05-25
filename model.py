@@ -49,7 +49,7 @@ class Transformer(nn.Module):
        out = self.attn(x)
        x = x + out
        x = self.norm1(x)
-       out = self.ff(x)
+       out = self.layer(x)
        x = x+out
        x = self.norm2(x)
        return x
@@ -104,3 +104,16 @@ y = torch.stack(y)
 
 dset = TensorDataset(X,y)
 loader = DataLoader(dset, 32, shuffle=True)
+
+model = TinyGPT(64, 8,seq_len)
+optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
+lossfn = nn.MSE()
+for epoch in range(100):
+    for x_batch, y_batch in loader:
+        optimizer.zero_grad()
+        out = model(x_batch)
+        out = out.view(-1, vocab_size)
+        y_batch = y_batch.view(-1)
+        loss = lossfn(out, y_batch)
+        loss.backward()
+        optimizer.step()
