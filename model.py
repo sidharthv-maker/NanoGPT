@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 class MHSelfAttention(nn.Module):
     def __init__(self, emb_dim, head_num, seq_len):
+        super().__init__()
         self.emb_dim = emb_dim
         self.head_num = head_num
         self.head_dim = emb_dim//head_num
@@ -10,6 +11,7 @@ class MHSelfAttention(nn.Module):
         self.WQ = nn.Linear(emb_dim, emb_dim)
         self.WK = nn.Linear(emb_dim, emb_dim)
         self.WV = nn.Linear(emb_dim, emb_dim)
+        self.WO = nn.Linear(emb_dim, emb_dim)
 
         mask = torch.tril(torch.ones(seq_len, seq_len))
         self.register_buffer("mask", mask)
@@ -20,23 +22,24 @@ class MHSelfAttention(nn.Module):
         Q = self.WQ(x)
         K = self.WK(x)
         V = self.WV(x)
-        Q.view(B, T, self.head_num, self.head_dim).transpose(1,2)
-        K.view(B, T, self.head_num, self.head_dim).transpose(1,2)
-        V.view(B, T, self.head_num, self.head_dim).transpose(1,2)
-        scores = Q @ K.transpose(-2,-1)
+        Q = Q.view(B, T, self.head_num, self.head_dim).transpose(1,2)
+        K = K.view(B, T, self.head_num, self.head_dim).transpose(1,2)
+        V = V.view(B, T, self.head_num, self.head_dim).transpose(1,2)
+        score = Q @ K.transpose(-2,-1)
         score = score/(self.emb_dim ** 0.5)
-        scores = scores.masked_fill(self.mask[:T, :T] == 0, float("-inf"))
+        score = score.masked_fill(self.mask[:T, :T] == 0, float("-inf"))
         weights = F.softmax(score, -1)
 
         out = weights @ V
         out = out.transpose(1,2).contiguous()
         out = out.view(B, T, self.emb_dim)
-        out = self.W_O(out)
+        out = self.WO(out)
         return out
 
 class Transformer(nn.Module):
     def __init__(self, emb_dim, head_num, seq_len):
-        self.attn = MHSelfAttention(emb_dim, head_num)
+        super().__init__()
+        self.attn = MHSelfAttention(emb_dim, head_num, seq_len)
         self.norm1 = nn.LayerNorm(emb_dim)
         self.layer = nn.Sequential(
             nn.Linear(emb_dim, 4*emb_dim),
@@ -55,17 +58,17 @@ class Transformer(nn.Module):
        return x
 
 class TinyGPT(nn.Module):
-    def __init__(self, emb_dim, head_num, seq_len):
+    def __init__(self, emb_dim, head_num, seq_len, vocab_size):
         super().__init__()
         self.emb_dim = emb_dim
         self.head_num = head_num
         self.head_dim = emb_dim//head_num
 
-        self.emb = nn.Embedding(28, emb_dim)
+        self.emb = nn.Embedding(vocab_size, emb_dim)
         self.posemb = nn.Embedding(seq_len, emb_dim)
         self.mod = nn.ModuleList([Transformer(emb_dim, head_num, seq_len) for _ in range(20)])
         self.norm = nn.LayerNorm(emb_dim)
-        self.lin = nn.Linear(emb_dim, 28)
+        self.lin = nn.Linear(emb_dim, vocab_size)
 
     def forward(self, x):
         tok = self.emb(x)
@@ -93,7 +96,7 @@ for ch, i in cha.items():
 
 data = torch.tensor([cha[ch] for ch in text])
 
-X, y = []
+X, y = [], []
 seq_len = 256
 for i in range(0, len(data) - seq_len):
     X.append(data[i:i+seq_len])
@@ -105,9 +108,9 @@ y = torch.stack(y)
 dset = TensorDataset(X,y)
 loader = DataLoader(dset, 32, shuffle=True)
 
-model = TinyGPT(64, 8,seq_len)
+model = TinyGPT(vocab_size,64, 8,seq_len)
 optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
-lossfn = nn.MSE()
+lossfn = nn.CrossEntropyLoss()
 for epoch in range(100):
     for x_batch, y_batch in loader:
         optimizer.zero_grad()
