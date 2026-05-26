@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, TensorDataset
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class MHSelfAttention(nn.Module):
     def __init__(self, emb_dim, head_num, seq_len):
         super().__init__()
@@ -62,15 +64,17 @@ class TinyGPT(nn.Module):
         super().__init__()
         self.emb_dim = emb_dim
         self.head_num = head_num
+        self.seq_len = seq_len
         self.head_dim = emb_dim//head_num
 
         self.emb = nn.Embedding(vocab_size, emb_dim)
         self.posemb = nn.Embedding(seq_len, emb_dim)
-        self.mod = nn.ModuleList([Transformer(emb_dim, head_num, seq_len) for _ in range(20)])
+        self.mod = nn.ModuleList([Transformer(emb_dim, head_num, seq_len) for _ in range(4)])
         self.norm = nn.LayerNorm(emb_dim)
         self.lin = nn.Linear(emb_dim, vocab_size)
 
     def forward(self, x):
+        x = x[:, :self.seq_len]
         tok = self.emb(x)
         _ , T, _ = tok.shape
         pos = self.posemb(torch.arange(T))
@@ -81,7 +85,7 @@ class TinyGPT(nn.Module):
         out = self.lin(x)
         return out
 
-with open("shakespeare.txt", "r") as f:
+with open("data/shkp.txt", "r") as f:
     text = f.read()
 
 chars = sorted(set(text))
@@ -108,11 +112,28 @@ y = torch.stack(y)
 dset = TensorDataset(X,y)
 loader = DataLoader(dset, 32, shuffle=True)
 
-model = TinyGPT(vocab_size,64, 8,seq_len)
+model = TinyGPT(64, 8,seq_len, vocab_size).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr = 0.001)
 lossfn = nn.CrossEntropyLoss()
+
+# import time
+
+# x_batch, y_batch = next(iter(loader))
+# start = time.time()
+# out = model(x_batch)
+# end = time.time()
+
+# secs_per_batch = end - start
+# total_batches = len(loader) * 100
+# total_secs = secs_per_batch * total_batches
+
+# print(f"1 batch: {secs_per_batch:.2f}s")
+# print(f"Estimated total: {total_secs/3600:.1f} hours")
+
 for epoch in range(100):
     for x_batch, y_batch in loader:
+        # x_batch = x_batch.to(device)
+        # y_batch = y_batch.to(device)
         optimizer.zero_grad()
         out = model(x_batch)
         out = out.view(-1, vocab_size)
