@@ -118,7 +118,7 @@ y = torch.stack(y)
 dset = TensorDataset(X, y)
 loader = DataLoader(dset, 32, shuffle=True)
 
-model = TinyGPT(256, 4, seq_len, vocab_size).to(device)
+model = TinyGPT(64, 8, seq_len, vocab_size).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 lossfn = nn.CrossEntropyLoss()
 
