@@ -1,3 +1,4 @@
+import urllib.request
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -6,6 +7,10 @@ import matplotlib.pyplot as plt
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
+
+url = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+with urllib.request.urlopen(url) as f:
+    text = f.read().decode("utf-8")
 
 class MHSelfAttention(nn.Module):
     def __init__(self, emb_dim, head_num, seq_len):
@@ -89,9 +94,6 @@ class TinyGPT(nn.Module):
         out = self.lin(x)
         return out
 
-with open("data/shkp.txt", "r") as f:
-    text = f.read()
-
 chars = sorted(set(text))
 vocab_size = len(chars)
 
@@ -146,22 +148,4 @@ plt.ylabel("Loss")
 plt.title("Training Loss Curve")
 plt.grid(True)
 plt.tight_layout()
-plt.savefig("loss_curve.png")
 plt.show()
-print("Loss curve saved to loss_curve.png")
-
-# --- Text Generation ---
-seed = "ROMEO:"  # Change this to whatever seed text you want
-context = torch.tensor([[cha[ch] for ch in seed]]).to(device)
-
-model.eval()
-for _ in range(500):
-    context = context[:, -seq_len:]
-    out = model(context)
-    out = out[:, -1, :]
-    probs = F.softmax(out/0.8, dim=-1)
-    next_token = torch.multinomial(probs, 1)
-    context = torch.cat([context, next_token], dim=1)
-
-output = "".join([idx[i.item()] for i in context[0]])
-print(output)
