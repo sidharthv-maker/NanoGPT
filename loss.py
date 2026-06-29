@@ -108,7 +108,7 @@ data = torch.tensor([cha[ch] for ch in text])
 
 X, y = [], []
 seq_len = 256
-for i in range(0, len(data) - seq_len, seq_len):
+for i in range(0, len(data) - seq_len):
     X.append(data[i:i+seq_len])
     y.append(data[i+1:i+seq_len+1])
 
@@ -116,7 +116,7 @@ X = torch.stack(X)
 y = torch.stack(y)
 
 dset = TensorDataset(X, y)
-loader = DataLoader(dset, 32, shuffle=True)
+loader = DataLoader(dset, 512, shuffle=True)
 
 model = TinyGPT(64, 8, seq_len, vocab_size).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
