@@ -149,3 +149,17 @@ plt.title("Training Loss Curve")
 plt.grid(True)
 plt.tight_layout()
 plt.show()
+prompt = "ROMEO:"
+context = torch.tensor([[cha[ch] for ch in prompt]]).to(device)
+
+model.eval()
+for _ in range(500):
+    context_crop = context[:, -seq_len:]
+    out = model(context_crop)
+    out = out[:, -1, :]
+    probs = F.softmax(out/0.8, dim=-1)
+    next_token = torch.multinomial(probs, 1)
+    context = torch.cat([context, next_token], dim=1)
+
+output = "".join([idx[i.item()] for i in context[0]])
+print(output)
