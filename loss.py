@@ -108,7 +108,7 @@ data = torch.tensor([cha[ch] for ch in text])
 
 X, y = [], []
 seq_len = 256
-for i in range(0, len(data) - seq_len, 32):
+for i in range(0, len(data) - seq_len, 64):
     X.append(data[i:i+seq_len])
     y.append(data[i+1:i+seq_len+1])
 
